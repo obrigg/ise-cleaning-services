@@ -42,7 +42,7 @@ def get_ise_cleanup_groups():
 
 def get_endpoints_by_group_id(groupId: str):
     if groupId == "":
-        url = base_url + "endpoint?size=10"
+        url = base_url + "endpoint?size=100"
     else:
         url = base_url + f"endpoint?size=100&filter=groupId.EQ.{groupId}"
     isFinished = False
@@ -63,6 +63,16 @@ def get_endpoints_by_group_id(groupId: str):
         return(list_of_endpoints)
 
 
+def get_endpoint_by_mac(mac: str):
+    url = base_url + f"endpoint?size=100&filter=mac.EQ.{mac}"
+    response = requests.get(url=url, headers=headers, auth=auth, verify=False)
+    if response.status_code != 200:
+        print(f"An error has occurred: {response.json()}")
+    else:
+        endpoint_id = response.json()['SearchResult']['resources'][0]['id']
+        return(endpoint_id)
+
+
 def check_ise_auth_status(mac_address: str):
     url = "https://" + os.environ.get('ISE_IP', "") + \
         "/admin/API/mnt/Session/MACAddress/" + mac_address
@@ -80,21 +90,23 @@ def delete_endpoint(endpoint_id: str):
     response = requests.delete(url=url, auth=auth, headers=headers, verify=False)
     if response.status_code != 204:
         print(f"Error deleting endpoint {endpoint_id}: {response.text}")
+    else:
+        print(f"Successfully deleted {endpoint_id}")
 
+if __name__ == "__main__":
+    # Gather relevant cleanup groups
+    cleanup_groups = get_ise_cleanup_groups()
+    # Gather all relevant endpoints
+    list_of_endpoints = []
+    for groupId in cleanup_groups:
+        endpoints = get_endpoints_by_group_id(groupId)
+        if endpoints != None:
+            list_of_endpoints += endpoints
+    print(f"Received a total of {len(list_of_endpoints)} endpoints.")
 
-# Gather relevant cleanup groups
-cleanup_groups = get_ise_cleanup_groups()
-# Gather all relevant endpoints
-list_of_endpoints = []
-for groupId in cleanup_groups:
-    endpoints = get_endpoints_by_group_id(groupId)
-    if endpoints != None:
-        list_of_endpoints += endpoints
-print(f"Received a total of {len(list_of_endpoints)} endpoints.")
-
-for endpoint in list_of_endpoints:
-    #print(endpoint)
-    status = check_ise_auth_status(endpoint['name'])
-    if status == "Stop":
-        print(f"Deleting endpoint {endpoint['name']}")
-        delete_endpoint(endpoint['id'])
+    for endpoint in list_of_endpoints:
+        #print(endpoint)
+        status = check_ise_auth_status(endpoint['name'])
+        if status == "Stop":
+            print(f"Deleting endpoint {endpoint['name']}")
+            delete_endpoint(endpoint['id'])
