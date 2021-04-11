@@ -2,12 +2,16 @@ import logging
 import socketserver
 import mab_cleanup
 from netaddr import *
+from threading import Thread
 
 
-def delete_mac(mac: str):
-    endpoint_id = mab_cleanup.get_endpoint_by_mac(mac)
-    print(f"Endpoint ID for MAC {mac} is: {endpoint_id}")
-    mab_cleanup.delete_endpoint(endpoint_id)
+def delete_mac(mac: str, cleanup_groups: list):
+    endpoint_id, endpoint_group_id = mab_cleanup.get_endpoint_by_mac(mac)
+    print(f"Endpoint ID for MAC {mac} is: {endpoint_id}, Group ID is: {endpoint_group_id}")
+    if cleanup_groups == [] or endpoint_group_id in cleanup_groups:
+        mab_cleanup.delete_endpoint(endpoint_id)
+    else:
+        print(f"Group {endpoint_group_id} is not in the cleanup group list. Ignoring.")
 
 
 HOST, PORT = "0.0.0.0", 514
@@ -30,10 +34,15 @@ class SyslogUDPHandler(socketserver.BaseRequestHandler):
                 print(f"{mac} is not a MAC address, probably not a MAB endpoint.")
                 mac = ""
             if mac != "":
-                delete_mac(mac)
+                t = Thread(target=delete_mac, args=(mac, cleanup_groups))
+                t.start()
             
 
 if __name__ == "__main__":
+    cleanup_groups = mab_cleanup.get_ise_cleanup_groups()
+    if cleanup_groups == "ERROR" or cleanup_groups == []:
+        print("No filter found - cleaning all endpoint groups.")
+        cleanup_groups = []
     try:
         server = socketserver.UDPServer((HOST,PORT), SyslogUDPHandler)
         server.serve_forever(poll_interval=0.5)

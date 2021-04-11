@@ -64,13 +64,14 @@ def get_endpoints_by_group_id(groupId: str):
 
 
 def get_endpoint_by_mac(mac: str):
-    url = base_url + f"endpoint?size=100&filter=mac.EQ.{mac}"
+    url = base_url + f"endpoint/name/{mac}"
     response = requests.get(url=url, headers=headers, auth=auth, verify=False)
     if response.status_code != 200:
         print(f"An error has occurred: {response.json()}")
     else:
-        endpoint_id = response.json()['SearchResult']['resources'][0]['id']
-        return(endpoint_id)
+        endpoint_id = response.json()['ERSEndPoint']['id']
+        endpoint_group_id = response.json()['ERSEndPoint']['groupId']
+        return(endpoint_id, endpoint_group_id)
 
 
 def check_ise_auth_status(mac_address: str):
