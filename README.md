@@ -65,10 +65,10 @@ ISE_PASSWORD= <ISE password>
 ```
 
 ### Run the Docker
-`docker run -d --env-file <path to env file> obrigg/ise-cleaner`
+`docker run -d -p 514:514/udp --env-file <path to env file> obrigg/ise-cleaning-service`
 
 running the Docker in interactive mode:
-`docker run -ti --env-file <path to env file>  obrigg/ise-cleaner`
+`docker run -ti -p 514:514/udp --env-file <path to env file>  obrigg/ise-cleaning-service`
 
 ----
 ### Licensing info
