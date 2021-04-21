@@ -24,20 +24,26 @@ def get_ise_cleanup_groups():
     tag #cleanup in their description for the cleanup process.
     It will return a list of group IDs.
     '''
+    isFinished = False
+    cleanup_groups = []
     print("Fetching ISE's endpoint groups...")
     url = base_url + "endpointgroup?size=100"
-    response = requests.get(url=url, auth=auth, headers=headers, verify=False)
-    if response.status_code == 200:
-        cleanup_groups = []
-        groups = response.json()['SearchResult']['resources']
-        for group in groups:
-            if "#cleanup" in group['description'].lower():
-                print(f"Endpoint group {group['name']} will be cleaned up")
-                cleanup_groups.append(group['id'])
-        return(cleanup_groups)
-    else:
-        print(f"ERROR: {response.text}")
-        return("ERROR")
+    while not isFinished:
+        response = requests.get(url=url, auth=auth, headers=headers, verify=False)
+        if response.status_code == 200:
+            groups = response.json()['SearchResult']['resources']
+            for group in groups:
+                if "#cleanup" in group['description'].lower():
+                    print(f"Endpoint group {group['name']} will be cleaned up")
+                    cleanup_groups.append(group['id'])
+            if 'nextPage' not in response.json()['SearchResult'].keys():
+                isFinished = True
+            else:
+                url = response.json()['SearchResult']['nextPage']['href']
+        else:
+            print(f"ERROR: {response.text}")
+            return("ERROR")
+    return(cleanup_groups)
 
 
 def get_endpoints_by_group_id(groupId: str):
